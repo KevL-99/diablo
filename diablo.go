@@ -1,10 +1,10 @@
 package main
 
-
 import (
 	"compress/gzip"
-	"fmt"
+	"diablo/blockchains/sui"
 	"encoding/json"
+	"fmt"
 	"hash"
 	"hash/fnv"
 	"io"
@@ -14,36 +14,35 @@ import (
 	"strings"
 	"time"
 
-	"diablo/core"
 	"diablo/blockchains/mock"
 	"diablo/blockchains/nalgorand"
 	"diablo/blockchains/ndiem"
 	"diablo/blockchains/nethereum"
+	"diablo/core"
 )
-
 
 const (
-	VERBOSITY_SILENT   int = 0
-	VERBOSITY_FATAL    int = 1
-	VERBOSITY_ERROR    int = 2
-	VERBOSITY_WARNING  int = 3
-	VERBOSITY_INFO     int = 4
-	VERBOSITY_DEBUG    int = 5
-	VERBOSITY_TRACE    int = 6
+	VERBOSITY_SILENT  int = 0
+	VERBOSITY_FATAL   int = 1
+	VERBOSITY_ERROR   int = 2
+	VERBOSITY_WARNING int = 3
+	VERBOSITY_INFO    int = 4
+	VERBOSITY_DEBUG   int = 5
+	VERBOSITY_TRACE   int = 6
 
-	PORT_DEFAULT       int = 5000
+	PORT_DEFAULT int = 5000
 
-	MAX_DELAY_DEFAULT  float64 = 1.0
-	MAX_SKEW_DEFAULT   float64 = 0.2
+	MAX_DELAY_DEFAULT float64 = 1.0
+	MAX_SKEW_DEFAULT  float64 = 0.2
 )
-
 
 func buildSystemMap() map[string]core.BlockchainInterface {
 	return map[string]core.BlockchainInterface{
 		"algorand": &nalgorand.BlockchainInterface{},
-		"diem": &ndiem.BlockchainInterface{},
+		"diem":     &ndiem.BlockchainInterface{},
 		"ethereum": &nethereum.BlockchainInterface{},
-		"mock": &mock.BlockchainInterface{},
+		"mock":     &mock.BlockchainInterface{},
+		"sui":      &sui.BlockchainInterface{},
 	}
 }
 
@@ -113,7 +112,7 @@ func printStat(result *core.Result) {
 		fmt.Printf("average load: -\n")
 	} else {
 		fmt.Printf("average load: %.1f tx/s\n",
-			float64(numSubmitted) / lastTime)
+			float64(numSubmitted)/lastTime)
 	}
 
 	if (len(latencies) == 0) || (lastTime <= 0) {
@@ -126,9 +125,9 @@ func printStat(result *core.Result) {
 	sort.Float64s(latencies)
 
 	fmt.Printf("average throughput: %.1f tx/s\n",
-		float64(len(latencies)) / lastTime)
+		float64(len(latencies))/lastTime)
 	fmt.Printf("average latency: %.3f s\n",
-		sumLatencies / float64(len(latencies)))
+		sumLatencies/float64(len(latencies)))
 	fmt.Printf("median latency: %.3f s\n", latencies[len(latencies)/2])
 }
 
@@ -160,17 +159,17 @@ func setVerbosity(verbosity int) {
 func fatal(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, "diablo: ")
 	fmt.Fprintf(os.Stderr, format, args...)
-	fmt.Fprintf(os.Stderr, "\nPlease type '%s --help' for more " +
+	fmt.Fprintf(os.Stderr, "\nPlease type '%s --help' for more "+
 		"information\n", os.Args[0])
 	os.Exit(1)
 }
 
 func handleHelp(string) error {
-	fmt.Printf("Usage: %s [--help | --version]                        " +
+	fmt.Printf("Usage: %s [--help | --version]                        "+
 		"             (1)\n", os.Args[0])
-	fmt.Printf("       %s primary [<options...>] <nsecondary> <setup> " +
+	fmt.Printf("       %s primary [<options...>] <nsecondary> <setup> "+
 		"<benchmark>  (2)\n", os.Args[0])
-	fmt.Printf("       %s secondary [<options...>] <primary>          " +
+	fmt.Printf("       %s secondary [<options...>] <primary>          "+
 		"             (3)\n", os.Args[0])
 	fmt.Printf(`
 (1) Print program information either help message or version information.
@@ -236,8 +235,8 @@ func handleVerbose(verbosity *int) {
 }
 
 func handleVerboseLevel(verbosity *int, level string) error {
-	var levels = map[string]int{ "fatal": 1, "error": 2, "warning": 3,
-		"information": 4, "debug": 5, "trace": 6 }
+	var levels = map[string]int{"fatal": 1, "error": 2, "warning": 3,
+		"information": 4, "debug": 5, "trace": 6}
 	var lowLevel, key string
 	var intLevel int
 	var err error
@@ -340,16 +339,19 @@ func main() {
 	verbosity = VERBOSITY_WARNING
 
 	shorts = append(shorts, shortOption{'e', true, func(l string) error {
-		env = append(env, l) ; return nil
+		env = append(env, l)
+		return nil
 	}})
-	longs = append(longs, longOption{"env", true, func(l string) error{
-		env = append(env, l) ; return nil
+	longs = append(longs, longOption{"env", true, func(l string) error {
+		env = append(env, l)
+		return nil
 	}})
 
 	shorts = append(shorts, shortOption{'v', false, func(string) error {
-		handleVerbose(&verbosity) ; return nil
+		handleVerbose(&verbosity)
+		return nil
 	}})
-	longs = append(longs, longOption{"verbose", true, func(v string)error{
+	longs = append(longs, longOption{"verbose", true, func(v string) error {
 		return handleVerboseLevel(&verbosity, v)
 	}})
 
@@ -396,7 +398,7 @@ func mainPrimary(verbosity int, env []string, args []string) {
 	var err error
 
 	compressDefined = false
-	longs = append(longs, longOption{"compress", false,func(string) error {
+	longs = append(longs, longOption{"compress", false, func(string) error {
 		if compressDefined {
 			return fmt.Errorf("option specified twice")
 		}
@@ -423,10 +425,12 @@ func mainPrimary(verbosity int, env []string, args []string) {
 	longs = append(longs, longOption{"help", false, handleHelp})
 
 	shorts = append(shorts, shortOption{'e', true, func(l string) error {
-		env = append(env, l) ; return nil
+		env = append(env, l)
+		return nil
 	}})
-	longs = append(longs, longOption{"env", true, func(l string) error{
-		env = append(env, l) ; return nil
+	longs = append(longs, longOption{"env", true, func(l string) error {
+		env = append(env, l)
+		return nil
 	}})
 
 	outputPathDefined = false
@@ -498,9 +502,10 @@ func mainPrimary(verbosity int, env []string, args []string) {
 	}})
 
 	shorts = append(shorts, shortOption{'v', false, func(string) error {
-		handleVerbose(&verbosity) ; return nil
+		handleVerbose(&verbosity)
+		return nil
 	}})
-	longs = append(longs, longOption{"verbose", true, func(v string)error{
+	longs = append(longs, longOption{"verbose", true, func(v string) error {
 		return handleVerboseLevel(&verbosity, v)
 	}})
 
@@ -516,12 +521,12 @@ func mainPrimary(verbosity int, env []string, args []string) {
 	} else if (index + 2) >= len(args) {
 		fatal("missing benchmark operand")
 	} else if (index + 3) < len(args) {
-		fatal("unexpected operand '%s'", args[index + 3])
+		fatal("unexpected operand '%s'", args[index+3])
 	}
 
 	nsecondaryStr = args[index]
-	primary.SetupPath = args[index + 1]
-	primary.BenchmarkPath = args[index + 2]
+	primary.SetupPath = args[index+1]
+	primary.BenchmarkPath = args[index+2]
 
 	primary.NumSecondary, err = strconv.Atoi(nsecondaryStr)
 	if err != nil {
@@ -580,10 +585,12 @@ func mainSecondary(verbosity int, env []string, args []string) {
 	var err error
 
 	shorts = append(shorts, shortOption{'e', true, func(l string) error {
-		env = append(env, l) ; return nil
+		env = append(env, l)
+		return nil
 	}})
-	longs = append(longs, longOption{"env", true, func(l string) error{
-		env = append(env, l) ; return nil
+	longs = append(longs, longOption{"env", true, func(l string) error {
+		env = append(env, l)
+		return nil
 	}})
 
 	shorts = append(shorts, shortOption{'h', false, handleHelp})
@@ -613,9 +620,10 @@ func mainSecondary(verbosity int, env []string, args []string) {
 	longs = append(longs, longOption{"tag", true, tagClosure})
 
 	shorts = append(shorts, shortOption{'v', false, func(string) error {
-		handleVerbose(&verbosity) ; return nil
+		handleVerbose(&verbosity)
+		return nil
 	}})
-	longs = append(longs, longOption{"verbose", true, func(v string)error{
+	longs = append(longs, longOption{"verbose", true, func(v string) error {
 		return handleVerboseLevel(&verbosity, v)
 	}})
 
@@ -627,7 +635,7 @@ func mainSecondary(verbosity int, env []string, args []string) {
 	if index >= len(args) {
 		fatal("missing primary operand")
 	} else if (index + 1) < len(args) {
-		fatal("unexpected operand '%s'", args[index + 1])
+		fatal("unexpected operand '%s'", args[index+1])
 	}
 
 	primary = args[index]
@@ -636,7 +644,7 @@ func mainSecondary(verbosity int, env []string, args []string) {
 
 	secondary = core.NewNsecondary(primary, port, env, tags,
 		buildSystemMap())
-
+	// log.Printf("new secondary built")
 	err = secondary.Run()
 	if err != nil {
 		fatal("%s", err.Error())

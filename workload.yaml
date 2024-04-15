@@ -1,0 +1,21 @@
+let:
+
+  - !loop &account
+    sample: !account { number: 2, stake: 100000 }
+
+  - !loop &lany { sample: !location [ ".*" ] }
+  - !loop &eany { sample: !endpoint [ ".*" ] }
+
+workloads:
+
+  - number: 1
+    client:
+      location: *lany
+      view: *eany
+      behavior:
+        - interaction: !transfer
+            from: *account
+            to: *account
+          load:
+            0: 1
+            10: 0

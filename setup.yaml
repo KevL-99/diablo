@@ -1,0 +1,12 @@
+interface: "sui"
+
+parameters:
+  prepare: nothing
+
+endpoints:
+
+  - addresses:
+      - 127.0.0.1:9000
+    tags:
+      - europe
+      - local
