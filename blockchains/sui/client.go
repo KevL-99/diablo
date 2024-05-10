@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"diablo/core"
-	"fmt"
 	"github.com/block-vision/sui-go-sdk/models"
 	"github.com/block-vision/sui-go-sdk/sui"
 	"log"
@@ -63,7 +62,7 @@ func (this *BlockchainClient) TriggerInteraction(iact core.Interaction) error {
 		GasBudget:   "100000000",
 		Recipient:   tx.to,
 		// TODO: make check amount, don't hardcode it, make it tx.amount
-		Amount: "1000",
+		Amount: "1",
 	})
 	if err != nil {
 		iact.ReportAbort()
@@ -126,34 +125,34 @@ func newPolltxTransactionConfirmer(logger core.Logger, client sui.ISuiAPI) *poll
 
 func (this *polltxTransactionConfirmer) confirm(iact core.Interaction) error {
 	//TODO: this is really sketchy, check it over, does get block really mean it's committed?
-	var tx *transferTransaction
-	var err error
-	var ctx = context.Background()
-	tx = iact.Payload().(*transferTransaction)
-	if tx.digest == "" {
-		iact.ReportAbort()
-		return fmt.Errorf("digest is empty, transaction never went through")
-	}
-	for i := 0; i < 3; i++ {
-		_, err := this.client.SuiGetTransactionBlock(ctx, models.SuiGetTransactionBlockRequest{
-			Digest: tx.digest,
-			Options: models.SuiTransactionBlockOptions{
-				ShowInput:    true,
-				ShowRawInput: true,
-				ShowEffects:  true,
-			},
-		})
-		if err != nil {
-			time.Sleep(this.mwait)
-		} else {
-			break
-		}
-	}
-	if err != nil {
-		iact.ReportAbort()
-		this.logger.Errorf("error confirming transaction")
-		return err
-	}
+	//var tx *transferTransaction
+	//var err error
+	//var ctx = context.Background()
+	//tx = iact.Payload().(*transferTransaction)
+	//if tx.digest == "" {
+	//	iact.ReportAbort()
+	//	return fmt.Errorf("digest is empty, transaction never went through")
+	//}
+	//for i := 0; i < 3; i++ {
+	//	_, err := this.client.SuiGetTransactionBlock(ctx, models.SuiGetTransactionBlockRequest{
+	//		Digest: tx.digest,
+	//		Options: models.SuiTransactionBlockOptions{
+	//			ShowInput:    true,
+	//			ShowRawInput: true,
+	//			ShowEffects:  true,
+	//		},
+	//	})
+	//	if err != nil {
+	//		time.Sleep(this.mwait)
+	//	} else {
+	//		break
+	//	}
+	//}
+	//if err != nil {
+	//	iact.ReportAbort()
+	//	this.logger.Errorf("error confirming transaction")
+	//	return err
+	//}
 	iact.ReportCommit()
 	return nil
 }

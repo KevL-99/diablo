@@ -17,5 +17,5 @@ workloads:
             from: *account
             to: *account
           load:
-            0: 1
-            10: 0
+            0: 800
+            40: 0
