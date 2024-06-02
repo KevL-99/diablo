@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"diablo/core"
+	"fmt"
 	"github.com/block-vision/sui-go-sdk/models"
 	"github.com/block-vision/sui-go-sdk/sui"
 	"log"
@@ -55,9 +56,7 @@ func (this *BlockchainClient) TriggerInteraction(iact core.Interaction) error {
 	iact.ReportSubmit()
 
 	rsp, err := this.client.TransferSui(ctx, models.TransferSuiRequest{
-		Signer: tx.from,
-		// TODO: always fetch [0] or check for the newest one? (or the oldest, cuz they all get funded with initial gas coin and want send from that)
-		// TODO: after recv, does the recv has enough coin for gas?
+		Signer:      tx.from,
 		SuiObjectId: tx.coinData,
 		GasBudget:   "100000000",
 		Recipient:   tx.to,
@@ -86,7 +85,6 @@ func (this *BlockchainClient) TriggerInteraction(iact core.Interaction) error {
 		iact.ReportAbort()
 		return err
 	}
-	// TODO: is this the right way to set digest? Will it be set after function exits? Is tx a local var or ptr?
 	iact.Payload().(*transferTransaction).digest = rsp2.Digest
 	return this.confirmer.confirm(iact)
 }
@@ -124,15 +122,15 @@ func newPolltxTransactionConfirmer(logger core.Logger, client sui.ISuiAPI) *poll
 }
 
 func (this *polltxTransactionConfirmer) confirm(iact core.Interaction) error {
-	//TODO: this is really sketchy, check it over, does get block really mean it's committed?
-	//var tx *transferTransaction
+	var tx *transferTransaction
 	//var err error
 	//var ctx = context.Background()
-	//tx = iact.Payload().(*transferTransaction)
-	//if tx.digest == "" {
-	//	iact.ReportAbort()
-	//	return fmt.Errorf("digest is empty, transaction never went through")
-	//}
+	tx = iact.Payload().(*transferTransaction)
+	if tx.digest == "" {
+		iact.ReportAbort()
+		return fmt.Errorf("digest is empty, transaction never went through")
+	}
+	// No need to make a request to check txn commit
 	//for i := 0; i < 3; i++ {
 	//	_, err := this.client.SuiGetTransactionBlock(ctx, models.SuiGetTransactionBlockRequest{
 	//		Digest: tx.digest,
